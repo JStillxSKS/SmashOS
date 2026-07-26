@@ -1,0 +1,91 @@
+#!/bin/sh
+# live-build chroot hook — configure Smash OS after packages install
+set -e
+
+echo "Smash OS chroot hook…"
+
+# Default user for live: smash / smash (live-config may override)
+if ! id smash >/dev/null 2>&1; then
+  useradd -m -s /bin/bash -G audio,video,plugdev,netdev,sudo smash || true
+  echo "smash:smash" | chpasswd || true
+fi
+
+# Copy skel into smash home if empty config
+if [ -d /home/smash ]; then
+  mkdir -p /home/smash/Charts/Songs /home/smash/.config
+  cp -a /etc/skel/.config/openbox /home/smash/.config/ 2>/dev/null || true
+  cp -a /etc/skel/.config/tint2 /home/smash/.config/ 2>/dev/null || true
+  chown -R smash:smash /home/smash
+fi
+
+# LightDM autologin for live feel (install ISO can re-enable greeter)
+mkdir -p /etc/lightdm
+if [ ! -f /etc/lightdm/lightdm.conf.d/50-smashos.conf ]; then
+  mkdir -p /etc/lightdm/lightdm.conf.d
+  cat > /etc/lightdm/lightdm.conf.d/50-smashos.conf << 'EOF'
+[Seat:*]
+autologin-user=smash
+autologin-user-timeout=0
+user-session=smashos
+greeter-session=lightdm-gtk-greeter
+EOF
+fi
+
+# Prefer smashos session
+# Disable heavy services we do not need
+systemctl disable bluetooth.service 2>/dev/null || true
+systemctl disable cups.service 2>/dev/null || true
+
+# Python tooling venv (isolated, avoids distro package fights)
+if command -v python3 >/dev/null; then
+  python3 -m venv /opt/smashos/venv --system-site-packages 2>/dev/null || \
+    python3 -m venv /opt/smashos/venv || true
+  /opt/smashos/venv/bin/pip install --upgrade pip wheel 2>/dev/null || true
+  /opt/smashos/venv/bin/pip install \
+    "mido>=1.3.0" "numpy>=1.24" "soundfile>=0.12" "Pillow>=10.0" "librosa>=0.10.0" \
+    2>/dev/null || true
+  # Prefer venv python for smash tools
+  if [ -x /opt/smashos/venv/bin/python ]; then
+    sed -i '1s|.*|#!/opt/smashos/venv/bin/python|' /opt/smashos/bin/smash 2>/dev/null || true
+  fi
+fi
+
+# Build Smash Drums Editor for Linux if node available and source present
+if [ -f /opt/smashos/packages/smash-drums-editor/package.json ] && command -v npm >/dev/null; then
+  echo "Building Smash Drums Editor (Linux)…"
+  cd /opt/smashos/packages/smash-drums-editor
+  npm ci --ignore-scripts 2>/dev/null || npm install --ignore-scripts || true
+  node scripts/ensure-electron.cjs 2>/dev/null || true
+  npm run build 2>/dev/null || true
+  # electron-builder linux dir target if configured
+  npx electron-builder --linux dir --config electron-builder.config.cjs 2>/dev/null || true
+  # Link binary if produced
+  for cand in \
+    release/linux-unpacked/smash-drums-editor \
+    release/linux-unpacked/Smash\ Drums\ Editor \
+    dist/linux-unpacked/smash-drums-editor
+  do
+    if [ -x "$cand" ]; then
+      ln -sfn "$(pwd)/$cand" /opt/smashos/bin/smash-drums-editor
+      break
+    fi
+  done
+  # Fallback wrapper: run electron on dist
+  if [ ! -e /opt/smashos/bin/smash-drums-editor ] && [ -d dist ]; then
+    cat > /opt/smashos/bin/smash-drums-editor << 'WRAP'
+#!/bin/sh
+cd /opt/smashos/packages/smash-drums-editor
+export ELECTRON_START_URL=""
+exec npx electron . "$@"
+WRAP
+    chmod +x /opt/smashos/bin/smash-drums-editor
+  fi
+fi
+
+# Performance sysctl tweaks (light)
+cat > /etc/sysctl.d/99-smashos.conf << 'EOF'
+vm.swappiness=10
+vm.vfs_cache_pressure=50
+EOF
+
+echo "Smash OS chroot hook done."

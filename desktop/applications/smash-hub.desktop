@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Smash Hub
+Comment=Smash OS workflow hub
+Exec=smash hub
+Icon=applications-multimedia
+Terminal=false
+Categories=AudioVideo;Utility;
+StartupNotify=true

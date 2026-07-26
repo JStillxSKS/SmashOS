@@ -1,0 +1,507 @@
+#!/usr/bin/env python3
+"""
+smash — unified Smash OS CLI for the full indies workflow.
+
+Commands:
+  new <title>           Create a chart project under ~/Charts
+  list                  List projects
+  open [title]          Open project folder (or Editor on export)
+  from-audio <file>     Audio → MIDI (drums) into current/project
+  from-midi <file>      MIDI → .indies package
+  pipeline <audio>      Audio → MIDI → .indies in one shot
+  export                Show/export status for project
+  pack                  SmashRoms pack (validate + bundle)
+  push-quest            ADB push .indies to Quest Install folder
+  apply-quest           Run apply-installs on device
+  editor                Launch Smash Drums Editor
+  browser               Open Indies-DB
+  doctor                Check tools, deps, device
+  hub                   Launch graphical hub (yad if available)
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+SMASHOS_ROOT = Path(os.environ.get("SMASHOS_ROOT", "/opt/smashos"))
+TOOLS = SMASHOS_ROOT / "tools"
+AUDIO_TO_MIDI = TOOLS / "audio-to-midi" / "audio_to_midi.py"
+MIDI_TO_INDIES = TOOLS / "midi-to-indies" / "midi_to_smash.py"
+SMASHROMS = TOOLS / "smashroms"
+CHARTS = Path(os.environ.get("SMASH_CHARTS", str(Path.home() / "Charts")))
+INDIES_DB = os.environ.get("INDIES_DB_URL", "https://indies-db.vercel.app")
+QUEST_INSTALL = "/sdcard/SmashIndies/Install"
+QUEST_INDIES = "/sdcard/Android/data/com.PotamWorks.SmashDrums/files/Indies"
+CURRENT_FILE = Path.home() / ".config" / "smashos" / "current-project"
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+    print("+", " ".join(cmd))
+    return subprocess.run(cmd, check=False, **kwargs)
+
+
+def ensure_charts() -> Path:
+    CHARTS.mkdir(parents=True, exist_ok=True)
+    (CHARTS / "Songs").mkdir(parents=True, exist_ok=True)
+    return CHARTS
+
+
+def slugify(title: str) -> str:
+    keep = []
+    for ch in title.strip():
+        if ch.isalnum() or ch in (" ", "-", "_"):
+            keep.append(ch)
+        else:
+            keep.append("_")
+    s = "".join(keep).strip().replace("  ", " ")
+    return s or "Untitled"
+
+
+def project_path(title: str | None = None) -> Path:
+    ensure_charts()
+    if title:
+        return CHARTS / slugify(title)
+    if CURRENT_FILE.is_file():
+        p = Path(CURRENT_FILE.read_text(encoding="utf-8").strip())
+        if p.is_dir():
+            return p
+    die("No current project. Use: smash new \"Song Name\"  or  smash open \"Song Name\"")
+
+
+def set_current(path: Path) -> None:
+    CURRENT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CURRENT_FILE.write_text(str(path.resolve()), encoding="utf-8")
+
+
+def write_project_json(root: Path, title: str) -> None:
+    meta = {
+        "title": title,
+        "created": datetime.now(timezone.utc).isoformat(),
+        "smashos": True,
+        "paths": {
+            "source": "source",
+            "midi": "midi",
+            "export": "export",
+            "work": "work",
+        },
+    }
+    (root / "project.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+
+
+def cmd_new(args: argparse.Namespace) -> None:
+    title = args.title
+    root = project_path(title) if False else (ensure_charts() / slugify(title))
+    if root.exists() and not args.force:
+        die(f"Project already exists: {root}\n  Use --force to reuse, or smash open \"{title}\"")
+    for sub in ("source", "midi", "export", "work"):
+        (root / sub).mkdir(parents=True, exist_ok=True)
+    write_project_json(root, title)
+    set_current(root)
+    print(f"Created project: {root}")
+    print(f"Current project set. Drop audio in: {root / 'source'}")
+
+
+def cmd_list(_: argparse.Namespace) -> None:
+    ensure_charts()
+    cur = ""
+    if CURRENT_FILE.is_file():
+        cur = CURRENT_FILE.read_text(encoding="utf-8").strip()
+    found = False
+    for p in sorted(CHARTS.iterdir()):
+        if not p.is_dir() or p.name.startswith("_") or p.name == "Songs":
+            continue
+        if (p / "project.json").is_file() or (p / "export").is_dir() or (p / "source").is_dir():
+            mark = " *" if str(p.resolve()) == cur else ""
+            print(f"{p.name}{mark}")
+            found = True
+    if not found:
+        print("(no projects yet — smash new \"Song Name\")")
+
+
+def cmd_open(args: argparse.Namespace) -> None:
+    if args.title:
+        root = ensure_charts() / slugify(args.title)
+        if not root.is_dir():
+            die(f"No project: {root}")
+        set_current(root)
+        print(f"Current project: {root}")
+    else:
+        root = project_path()
+        print(f"Current project: {root}")
+    if args.folder:
+        for opener in ("xdg-open", "thunar", "pcmanfm"):
+            if shutil.which(opener):
+                run([opener, str(root)])
+                return
+    if args.editor:
+        cmd_editor(argparse.Namespace())
+
+
+def cmd_from_audio(args: argparse.Namespace) -> None:
+    root = project_path(args.project) if args.project else project_path()
+    audio = Path(args.file).expanduser().resolve()
+    if not audio.is_file():
+        die(f"Audio not found: {audio}")
+    # Copy into project source if outside
+    src_dir = root / "source"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    dest_audio = src_dir / audio.name
+    if audio != dest_audio:
+        shutil.copy2(audio, dest_audio)
+        audio = dest_audio
+    midi_dir = root / "midi"
+    midi_dir.mkdir(parents=True, exist_ok=True)
+    if not AUDIO_TO_MIDI.is_file():
+        die(f"Missing {AUDIO_TO_MIDI}")
+    cmd = [sys.executable, str(AUDIO_TO_MIDI), str(audio), "--out", str(midi_dir)]
+    if args.engine:
+        cmd.extend(["--engine", args.engine])
+    r = run(cmd)
+    if r.returncode != 0:
+        die("audio-to-midi failed", r.returncode)
+    print(f"MIDI written under {midi_dir}")
+    set_current(root)
+
+
+def cmd_from_midi(args: argparse.Namespace) -> None:
+    root = project_path(args.project) if args.project else project_path()
+    midi = Path(args.file).expanduser().resolve()
+    if not midi.is_file():
+        # try project midi folder
+        cand = root / "midi" / args.file
+        if cand.is_file():
+            midi = cand
+        else:
+            die(f"MIDI not found: {args.file}")
+    export = root / "export"
+    export.mkdir(parents=True, exist_ok=True)
+    if not MIDI_TO_INDIES.is_file():
+        die(f"Missing {MIDI_TO_INDIES}")
+    cmd = [sys.executable, str(MIDI_TO_INDIES), str(midi), "--out", str(export)]
+    # pull title from project.json
+    pj = root / "project.json"
+    if pj.is_file():
+        try:
+            meta = json.loads(pj.read_text(encoding="utf-8"))
+            if meta.get("title"):
+                cmd.extend(["--title", meta["title"]])
+        except json.JSONDecodeError:
+            pass
+    if args.audio:
+        cmd.extend(["--audio", str(Path(args.audio).expanduser().resolve())])
+    else:
+        # first audio in source/
+        for ext in (".ogg", ".wav", ".mp3", ".flac"):
+            hits = list((root / "source").glob(f"*{ext}"))
+            if hits:
+                cmd.extend(["--audio", str(hits[0])])
+                break
+    r = run(cmd)
+    if r.returncode != 0:
+        die("midi-to-indies failed", r.returncode)
+    print(f"Export under {export}")
+    set_current(root)
+
+
+def cmd_pipeline(args: argparse.Namespace) -> None:
+    # ensure project
+    if args.project:
+        title = args.project
+        root = ensure_charts() / slugify(title)
+        if not root.is_dir():
+            for sub in ("source", "midi", "export", "work"):
+                (root / sub).mkdir(parents=True, exist_ok=True)
+            write_project_json(root, title)
+        set_current(root)
+    else:
+        try:
+            root = project_path()
+        except SystemExit:
+            # create from audio filename
+            audio = Path(args.file).expanduser()
+            title = audio.stem
+            root = ensure_charts() / slugify(title)
+            for sub in ("source", "midi", "export", "work"):
+                (root / sub).mkdir(parents=True, exist_ok=True)
+            write_project_json(root, title)
+            set_current(root)
+
+    ns = argparse.Namespace(file=args.file, project=None, engine=args.engine)
+    cmd_from_audio(ns)
+    # pick newest midi
+    midis = sorted((project_path() / "midi").glob("*.mid"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not midis:
+        midis = sorted((project_path() / "midi").glob("*.midi"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not midis:
+        die("No MIDI produced")
+    ns2 = argparse.Namespace(file=str(midis[0]), project=None, audio=None)
+    cmd_from_midi(ns2)
+    print("Pipeline complete.")
+    print(f"  project: {project_path()}")
+    print(f"  export:  {project_path() / 'export'}")
+    print("  next: smash editor   or   smash push-quest")
+
+
+def cmd_export(_: argparse.Namespace) -> None:
+    root = project_path()
+    exp = root / "export"
+    print(f"Project: {root}")
+    if not exp.is_dir():
+        print("No export/ yet")
+        return
+    files = list(exp.rglob("*.indies")) + list(exp.rglob("meta.json"))
+    if not files:
+        print("export/ is empty — smash from-midi or chart in Editor")
+        return
+    for f in sorted(files):
+        print(f"  {f.relative_to(root)}  ({f.stat().st_size} bytes)")
+
+
+def cmd_pack(args: argparse.Namespace) -> None:
+    root = project_path()
+    script = SMASHROMS / "pack.py"
+    if not script.is_file():
+        die(f"Missing {script}")
+    cmd = [sys.executable, str(script), str(root)]
+    if args.out:
+        cmd.extend(["--out", args.out])
+    r = run(cmd)
+    if r.returncode != 0:
+        die("pack failed", r.returncode)
+
+
+def cmd_push_quest(args: argparse.Namespace) -> None:
+    root = project_path()
+    indies = list((root / "export").rglob("*.indies"))
+    if args.file:
+        indies = [Path(args.file).expanduser().resolve()]
+    if not indies:
+        die("No .indies in export/. Finish charting or smash from-midi first.")
+    if not shutil.which("adb"):
+        die("adb not found — install android-tools-adb (Smash OS should ship it)")
+    # devices
+    r = run(["adb", "devices"], capture_output=True, text=True)
+    lines = [ln for ln in (r.stdout or "").splitlines() if "\tdevice" in ln]
+    if not lines:
+        die("No Quest/device in adb. Enable USB debugging and plug in.")
+    run(["adb", "shell", "mkdir", "-p", QUEST_INSTALL])
+    for f in indies:
+        remote = f"{QUEST_INSTALL}/{f.name}"
+        r = run(["adb", "push", str(f), remote])
+        if r.returncode != 0:
+            die(f"push failed: {f}")
+    print(f"Pushed {len(indies)} file(s) to {QUEST_INSTALL}")
+    print("Next: smash apply-quest   (or open Smash Indies Drag & Drop on headset)")
+
+
+def cmd_apply_quest(_: argparse.Namespace) -> None:
+    if not shutil.which("adb"):
+        die("adb not found")
+    local = SMASHROMS / "apply-installs-quest.sh"
+    if local.is_file():
+        run(["adb", "push", str(local), "/sdcard/SmashIndies/apply-installs.sh"])
+    r = run(["adb", "shell", "sh", "/sdcard/SmashIndies/apply-installs.sh"])
+    if r.returncode != 0:
+        # fallback inline
+        script = (
+            f"mkdir -p {QUEST_INDIES}; "
+            f"cp -f {QUEST_INSTALL}/*.indies {QUEST_INDIES}/ 2>/dev/null; "
+            f"ls {QUEST_INDIES}"
+        )
+        run(["adb", "shell", "sh", "-c", script])
+    print("Apply done. Open Smash Drums → Custom / Indies.")
+
+
+def cmd_editor(_: argparse.Namespace) -> None:
+    candidates = [
+        shutil.which("smash-drums-editor"),
+        "/opt/smashos/bin/smash-drums-editor",
+        "/opt/SmashDrumsEditor/smash-drums-editor",
+        str(SMASHOS_ROOT / "bin" / "smash-drums-editor"),
+    ]
+    # electron dev fallback
+    editor_src = SMASHOS_ROOT / "packages" / "smash-drums-editor"
+    for c in candidates:
+        if c and Path(c).exists():
+            run([c])
+            return
+    if (editor_src / "package.json").is_file() and shutil.which("npm"):
+        print("Launching Editor (dev)…")
+        run(["npm", "run", "desktop:dev"], cwd=str(editor_src))
+        return
+    # try desktop file
+    if shutil.which("gtk-launch"):
+        r = run(["gtk-launch", "smash-drums-editor"])
+        if r.returncode == 0:
+            return
+    die("Smash Drums Editor not installed. Build packages/smash-drums-editor for Linux.")
+
+
+def cmd_browser(_: argparse.Namespace) -> None:
+    for b in ("firefox-esr", "firefox", "chromium", "google-chrome"):
+        if shutil.which(b):
+            run([b, INDIES_DB])
+            return
+    if shutil.which("xdg-open"):
+        run(["xdg-open", INDIES_DB])
+        return
+    die("No browser found")
+
+
+def cmd_doctor(_: argparse.Namespace) -> None:
+    print("Smash OS doctor")
+    print(f"  SMASHOS_ROOT={SMASHOS_ROOT}")
+    print(f"  CHARTS={CHARTS}")
+    print(f"  INDIES_DB={INDIES_DB}")
+    for label, path in [
+        ("audio_to_midi", AUDIO_TO_MIDI),
+        ("midi_to_smash", MIDI_TO_INDIES),
+        ("pack.py", SMASHROMS / "pack.py"),
+    ]:
+        ok = path.is_file()
+        print(f"  [{'OK' if ok else 'MISSING'}] {label}: {path}")
+    for dep in ("python3", "adb", "ffmpeg", "firefox-esr", "firefox", "openbox"):
+        w = shutil.which(dep)
+        if w:
+            print(f"  [OK] {dep}: {w}")
+    # python modules
+    for mod in ("mido", "numpy", "librosa", "soundfile"):
+        try:
+            __import__(mod)
+            print(f"  [OK] python:{mod}")
+        except ImportError:
+            print(f"  [MISSING] python:{mod}")
+    if shutil.which("adb"):
+        run(["adb", "devices"])
+    if CURRENT_FILE.is_file():
+        print(f"  current project: {CURRENT_FILE.read_text(encoding='utf-8').strip()}")
+    else:
+        print("  current project: (none)")
+
+
+def cmd_hub(_: argparse.Namespace) -> None:
+    hub = TOOLS / "hub" / "smash-hub"
+    if hub.is_file():
+        run([str(hub)])
+        return
+    # inline yad menu
+    if not shutil.which("yad"):
+        die("yad not installed; use smash CLI commands")
+    out = subprocess.check_output(
+        [
+            "yad",
+            "--list",
+            "--title=Smash OS Hub",
+            "--width=420",
+            "--height=360",
+            "--column=Action",
+            "New project",
+            "Open Charts folder",
+            "Launch Editor",
+            "Open Indies-DB",
+            "Pipeline (audio→indies)",
+            "Push to Quest",
+            "Doctor",
+            "--print-column=1",
+        ],
+        text=True,
+    ).strip()
+    actions = {
+        "New project": lambda: run([sys.executable, __file__, "new", "Untitled"]),
+        "Open Charts folder": lambda: run(["xdg-open", str(ensure_charts())]),
+        "Launch Editor": lambda: cmd_editor(argparse.Namespace()),
+        "Open Indies-DB": lambda: cmd_browser(argparse.Namespace()),
+        "Pipeline (audio→indies)": lambda: die("Use: smash pipeline /path/to/audio.wav"),
+        "Push to Quest": lambda: cmd_push_quest(argparse.Namespace(file=None)),
+        "Doctor": lambda: cmd_doctor(argparse.Namespace()),
+    }
+    if out in actions:
+        actions[out]()
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="smash", description="Smash OS charting workflow CLI")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    n = sub.add_parser("new", help="Create chart project")
+    n.add_argument("title")
+    n.add_argument("--force", action="store_true")
+    n.set_defaults(func=cmd_new)
+
+    sub.add_parser("list", help="List projects").set_defaults(func=cmd_list)
+
+    o = sub.add_parser("open", help="Set current project")
+    o.add_argument("title", nargs="?")
+    o.add_argument("--folder", action="store_true")
+    o.add_argument("--editor", action="store_true")
+    o.set_defaults(func=cmd_open)
+
+    fa = sub.add_parser("from-audio", help="Audio → MIDI into project")
+    fa.add_argument("file")
+    fa.add_argument("--project")
+    fa.add_argument("--engine", default="drums")
+    fa.set_defaults(func=cmd_from_audio)
+
+    fm = sub.add_parser("from-midi", help="MIDI → .indies")
+    fm.add_argument("file")
+    fm.add_argument("--project")
+    fm.add_argument("--audio")
+    fm.set_defaults(func=cmd_from_midi)
+
+    pl = sub.add_parser("pipeline", help="Audio → MIDI → .indies")
+    pl.add_argument("file")
+    pl.add_argument("--project")
+    pl.add_argument("--engine", default="drums")
+    pl.set_defaults(func=cmd_pipeline)
+
+    sub.add_parser("export", help="Show exports").set_defaults(func=cmd_export)
+
+    pk = sub.add_parser("pack", help="SmashRoms pack/validate")
+    pk.add_argument("--out")
+    pk.set_defaults(func=cmd_pack)
+
+    pq = sub.add_parser("push-quest", help="ADB push .indies to Quest")
+    pq.add_argument("--file")
+    pq.set_defaults(func=cmd_push_quest)
+
+    sub.add_parser("apply-quest", help="Apply Install → Smash Drums Indies on Quest").set_defaults(
+        func=cmd_apply_quest
+    )
+    sub.add_parser("editor", help="Launch Editor").set_defaults(func=cmd_editor)
+    sub.add_parser("browser", help="Open Indies-DB").set_defaults(func=cmd_browser)
+    sub.add_parser("doctor", help="Environment check").set_defaults(func=cmd_doctor)
+    sub.add_parser("hub", help="Graphical hub").set_defaults(func=cmd_hub)
+    return p
+
+
+def main() -> None:
+    # Dev mode: tools next to this repo if /opt not present
+    global SMASHOS_ROOT, TOOLS, AUDIO_TO_MIDI, MIDI_TO_INDIES, SMASHROMS
+    if not AUDIO_TO_MIDI.is_file():
+        here = Path(__file__).resolve().parent.parent  # tools/
+        if (here / "audio-to-midi" / "audio_to_midi.py").is_file():
+            SMASHOS_ROOT = here.parent
+            TOOLS = here
+            AUDIO_TO_MIDI = TOOLS / "audio-to-midi" / "audio_to_midi.py"
+            MIDI_TO_INDIES = TOOLS / "midi-to-indies" / "midi_to_smash.py"
+            SMASHROMS = TOOLS / "smashroms"
+
+    parser = build_parser()
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

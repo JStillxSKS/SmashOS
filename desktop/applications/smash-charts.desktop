@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Charts
+Comment=Smash OS chart projects
+Exec=sh -c "mkdir -p \"$HOME/Charts\" && thunar \"$HOME/Charts\""
+Icon=folder-music
+Terminal=false
+Categories=System;FileManager;

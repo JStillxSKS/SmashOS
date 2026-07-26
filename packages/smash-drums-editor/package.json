@@ -1,0 +1,63 @@
+{
+  "name": "smash-drums-editor",
+  "version": "0.1.3",
+  "description": "Desktop chart editor for Smash Drums custom songs",
+  "author": "",
+  "keywords": [
+    "smash-drums",
+    "chart-editor",
+    "electron",
+    "react",
+    "vite"
+  ],
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "dev:lan": "vite --host",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "desktop:dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5174 && cross-env ELECTRON_START_URL=http://127.0.0.1:5174 electron .\"",
+    "desktop:clean": "node scripts/clean-release.cjs",
+    "create-icon": "node scripts/create-app-icon.cjs",
+    "desktop:build": "npm run build && node scripts/clean-release.cjs && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --config electron-builder.config.cjs",
+    "desktop:build:linux": "npm run build && node scripts/clean-release.cjs && electron-builder --linux dir AppImage --config electron-builder.config.cjs",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:apk": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug && cd .. && node scripts/copy-android-apk.cjs",
+    "android:apk:copy": "node scripts/copy-android-apk.cjs",
+    "postinstall": "node scripts/ensure-electron.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/share": "^8.0.1",
+    "@supabase/supabase-js": "^2.49.8",
+    "jszip": "^3.10.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^35.7.5",
+    "electron-builder": "^26.0.12",
+    "oxlint": "^1.69.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.0",
+    "wait-on": "^8.0.5"
+  },
+  "allowScripts": {
+    "electron@35.7.5": true,
+    "ffmpeg-static@5.3.0": true
+  }
+}

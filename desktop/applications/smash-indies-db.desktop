@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Indies-DB
+Comment=Community maps for Smash Drums
+Exec=smash browser
+Icon=web-browser
+Terminal=false
+Categories=Network;WebBrowser;
+StartupNotify=true

@@ -1,0 +1,8 @@
+# Works on Python 3.14 (and older). No TensorFlow.
+numpy>=1.24
+librosa>=0.10.0
+soundfile>=0.12
+mido>=1.3.0
+
+# Optional better engine (usually needs Python 3.10–3.12, NOT 3.14):
+#   py -3.12 -m pip install basic-pitch

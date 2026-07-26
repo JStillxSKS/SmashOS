@@ -1,0 +1,15 @@
+build/work/
+build/includes.chroot/
+dist/
+**/.DS_Store
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/node_modules/
+packages/smash-drums-editor/dist/
+packages/smash-drums-editor/release/
+packages/smash-drums-editor/.local/
+*.iso
+*.log
+_test_charts/

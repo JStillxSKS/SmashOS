@@ -1,0 +1,29 @@
+{
+  "policies": {
+    "Homepage": {
+      "URL": "https://indies-db.vercel.app",
+      "Locked": false,
+      "StartPage": "homepage"
+    },
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "DontCheckDefaultBrowser": true,
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "DisablePocket": true,
+    "Preferences": {
+      "browser.startup.homepage": {
+        "Value": "https://indies-db.vercel.app",
+        "Status": "user"
+      },
+      "browser.newtabpage.enabled": {
+        "Value": false,
+        "Status": "user"
+      },
+      "datareporting.policy.dataSubmissionPolicyBypassNotification": {
+        "Value": true,
+        "Status": "locked"
+      }
+    }
+  }
+}

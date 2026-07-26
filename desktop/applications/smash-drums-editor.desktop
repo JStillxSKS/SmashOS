@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Smash Drums Editor
+Comment=Chart editor for Smash Drums indies
+Exec=smash editor
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;Music;
+StartupNotify=true
+Keywords=smash;drums;chart;indies;

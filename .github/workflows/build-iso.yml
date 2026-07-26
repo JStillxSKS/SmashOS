@@ -1,0 +1,33 @@
+name: Build Smash OS ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  iso:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install live-build
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            live-build debootstrap squashfs-tools xorriso isolinux syslinux-common \
+            rsync git ca-certificates curl
+
+      - name: Build ISO
+        run: sudo ./build/build-iso.sh
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: smashos-iso
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14

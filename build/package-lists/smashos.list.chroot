@@ -1,0 +1,67 @@
+# Smash OS package set — lean but complete for charting
+
+# Base desktop (light)
+xorg
+xserver-xorg-video-all
+xserver-xorg-input-all
+openbox
+tint2
+picom
+thunar
+thunar-volman
+xfce4-terminal
+yad
+lxpolkit
+dbus-x11
+lightdm
+lightdm-gtk-greeter
+network-manager
+network-manager-gnome
+volumeicon-alsa
+pavucontrol
+pulseaudio
+alsa-utils
+fonts-dejavu-core
+hsetroot
+
+# Browser
+firefox-esr
+
+# Toolchain / runtime
+python3
+python3-pip
+python3-venv
+python3-numpy
+python3-mido
+python3-soundfile
+python3-pil
+python3-librosa
+ffmpeg
+git
+curl
+ca-certificates
+unzip
+zip
+jq
+rsync
+adb
+android-tools-adb
+android-tools-fastboot
+
+# Electron / Node for building or running Editor if needed
+# (prefer prebuilt binary in /opt; node kept for rebuilds)
+nodejs
+npm
+
+# Nice-to-have without bloat
+mousepad
+htop
+neofetch
+pcmanfm
+gparted
+os-prober
+grub-efi-amd64
+squashfs-tools
+live-boot
+live-config
+live-config-systemd

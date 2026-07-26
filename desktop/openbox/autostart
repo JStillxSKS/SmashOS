@@ -1,0 +1,48 @@
+#!/bin/sh
+# Smash OS session — keep it light, keep it fast.
+export SMASHOS_ROOT="${SMASHOS_ROOT:-/opt/smashos}"
+export PATH="/opt/smashos/bin:/usr/local/bin:$PATH"
+export SMASH_CHARTS="${SMASH_CHARTS:-$HOME/Charts}"
+export INDIES_DB_URL="${INDIES_DB_URL:-https://indies-db.vercel.app}"
+
+mkdir -p "$HOME/Charts/Songs" "$HOME/.config/smashos"
+
+# Compositor only if GPU is happy (skip on very weak VMs if needed)
+if command -v picom >/dev/null 2>&1; then
+  picom -b --vsync 2>/dev/null || picom -b 2>/dev/null || true
+fi
+
+# Panel
+if command -v tint2 >/dev/null 2>&1; then
+  tint2 &
+fi
+
+# Nitrogen / solid bg — black, no wallpaper bloat
+if command -v xsetroot >/dev/null 2>&1; then
+  xsetroot -solid "#0d1117"
+fi
+
+# PolicyKit agent for mounts / network if present
+if command -v lxpolkit >/dev/null 2>&1; then
+  lxpolkit &
+elif command -v /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 >/dev/null 2>&1; then
+  /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 &
+fi
+
+# Network applet
+if command -v nm-applet >/dev/null 2>&1; then
+  nm-applet &
+fi
+
+# Volume
+if command -v volumeicon >/dev/null 2>&1; then
+  volumeicon &
+fi
+
+# Primary app: Editor (small delay so panel paints first)
+(
+  sleep 0.6
+  smash editor >/dev/null 2>&1 || true
+) &
+
+# Do not auto-open browser every login (saves RAM). Super+B or dock button.

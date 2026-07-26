@@ -1,0 +1,410 @@
+/* SmashDrumsEditor — NEXUS future theme */
+
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
+
+.app--future {
+  --bg: #000000;
+  --bg-elevated: #000000;
+  --bg-panel: #000000;
+  --border: rgba(255, 184, 0, 0.14);
+  --border-hover: rgba(232, 38, 42, 0.4);
+  --text: #fff8ee;
+  --text-muted: #9a8a78;
+  --accent: #ffb800;
+  --accent-2: #e8262a;
+  --accent-3: #ff6b1a;
+  --accent-glow: rgba(255, 184, 0, 0.35);
+  --accent-glow-2: rgba(232, 38, 42, 0.3);
+  --radius: 4px;
+  --radius-sm: 2px;
+  --font-display: "Orbitron", system-ui, sans-serif;
+  --font-ui: "Rajdhani", system-ui, sans-serif;
+  --font-mono: "Share Tech Mono", "JetBrains Mono", monospace;
+  font-family: var(--font-ui);
+  position: relative;
+  isolation: isolate;
+}
+
+.app--future .ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.app--future .ambient__grid {
+  position: absolute;
+  inset: -40% -20%;
+  background-image:
+    linear-gradient(rgba(255, 184, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 184, 0, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform: perspective(600px) rotateX(58deg) translateY(-8%);
+  transform-origin: 50% 0%;
+  animation: grid-drift 24s linear infinite;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 40%, black 20%, transparent 75%);
+}
+
+.app--future .ambient__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+  animation: orb-float 12s ease-in-out infinite;
+}
+
+.app--future .ambient__orb--a {
+  width: 420px;
+  height: 420px;
+  top: -120px;
+  left: 12%;
+  background: radial-gradient(circle, rgba(232, 38, 42, 0.5), transparent 70%);
+}
+
+.app--future .ambient__orb--b {
+  width: 520px;
+  height: 520px;
+  bottom: -180px;
+  right: 8%;
+  background: radial-gradient(circle, rgba(255, 184, 0, 0.35), transparent 70%);
+  animation-delay: -4s;
+}
+
+.app--future .ambient__orb--c {
+  width: 280px;
+  height: 280px;
+  top: 40%;
+  left: 45%;
+  background: radial-gradient(circle, rgba(255, 107, 26, 0.4), transparent 70%);
+  animation-delay: -7s;
+}
+
+.app--future .ambient__scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 4px
+  );
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+}
+
+.app--future .app-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+@keyframes grid-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 0 96px, 96px 0;
+  }
+}
+
+@keyframes orb-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -18px) scale(1.06);
+  }
+}
+
+@keyframes neon-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px var(--accent-glow),
+      inset 0 0 20px rgba(255, 184, 0, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 28px var(--accent-glow),
+      0 0 48px var(--accent-glow-2),
+      inset 0 0 28px rgba(232, 38, 42, 0.08);
+  }
+}
+
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* Toolbar */
+.app--future .toolbar {
+  background: rgba(0, 0, 0, 0.94);
+  border-bottom: 1px solid rgba(255, 184, 0, 0.2);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+.app--future .brand {
+  gap: 12px;
+}
+
+.app--future .brand > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app--future .brand-chip {
+  align-self: flex-start;
+}
+
+.app--future .brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: 0 0 16px rgba(255, 140, 0, 0.25);
+}
+
+.app--future .toolbar-left h1 {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #fff 0%, var(--accent) 55%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.app--future .brand-chip {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(232, 38, 42, 0.45);
+  color: var(--accent-2);
+  background: rgba(232, 38, 42, 0.08);
+  box-shadow: 0 0 16px rgba(232, 38, 42, 0.15);
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+.app--future .toolbar-center {
+  border-radius: 2px;
+  border: 1px solid rgba(255, 184, 0, 0.22);
+  background: rgba(255, 184, 0, 0.04);
+  box-shadow: inset 0 0 24px rgba(255, 184, 0, 0.04);
+}
+
+.app--future .timecode,
+.app--future .beatcode,
+.app--future .toolbar-bpm-input {
+  font-family: var(--font-mono);
+}
+
+.app--future .timecode {
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(255, 184, 0, 0.4);
+}
+
+.app--future .play-btn {
+  border-radius: 4px;
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #000000;
+  animation: neon-pulse 3s ease-in-out infinite;
+}
+
+.app--future .export-btn {
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  background: linear-gradient(90deg, var(--accent-3), var(--accent));
+}
+
+/* Sidebars + HUD panels */
+.app--future .sidebar {
+  background: rgba(0, 0, 0, 0.94);
+  border-color: rgba(255, 184, 0, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.app--future .sidebar-left {
+  border-right: 1px solid rgba(232, 38, 42, 0.15);
+  box-shadow: inset -1px 0 0 rgba(255, 184, 0, 0.08);
+}
+
+.app--future .sidebar-right {
+  border-left: 1px solid rgba(255, 184, 0, 0.15);
+  box-shadow: inset 1px 0 0 rgba(232, 38, 42, 0.08);
+}
+
+.app--future .drawer-toggle {
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  border-color: rgba(255, 184, 0, 0.35);
+  font-family: var(--font-display);
+}
+
+.app--future .drawer-toggle:hover {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 20px rgba(232, 38, 42, 0.2);
+}
+
+.app--future .hud-panel {
+  position: relative;
+  background: var(--bg-panel) !important;
+  border: 1px solid rgba(255, 184, 0, 0.18) !important;
+  border-radius: 2px !important;
+  backdrop-filter: blur(8px);
+}
+
+.app--future .hud-panel::before,
+.app--future .hud-panel::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.app--future .hud-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+}
+
+.app--future .hud-panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--accent-2);
+  border-right: 2px solid var(--accent-2);
+}
+
+.app--future .collapsible-header {
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+  background: #000000;
+}
+
+.app--future .collapsible-title {
+  color: var(--accent);
+  font-size: 0.58rem;
+}
+
+.app--future .collapsible-badge {
+  color: var(--accent-2);
+  border-color: rgba(232, 38, 42, 0.35);
+  background: rgba(232, 38, 42, 0.1);
+  border-radius: 2px;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+.app--future .panel input,
+.app--future .panel select {
+  background: #000000 !important;
+  color: #fff8ee !important;
+  -webkit-text-fill-color: #fff8ee;
+  color-scheme: dark;
+}
+
+.app--future .toolbar-bpm-input {
+  background: #000000 !important;
+  color: #fff8ee !important;
+  -webkit-text-fill-color: #fff8ee !important;
+  caret-color: var(--accent);
+  color-scheme: dark;
+}
+
+.app--future .panel select option {
+  background: #000000;
+  color: #fff8ee;
+}
+
+.app--future .panel input:focus,
+.app--future .panel select:focus,
+.app--future .toolbar-bpm-input:focus {
+  border-color: var(--accent-2);
+  box-shadow:
+    0 0 0 2px rgba(232, 38, 42, 0.15),
+    0 0 16px rgba(255, 184, 0, 0.2);
+}
+
+.app--future .btn.active,
+.app--future .btn.is-active {
+  background: rgba(255, 184, 0, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.2);
+}
+
+.app--future .btn-accent {
+  border-color: rgba(255, 179, 71, 0.45);
+  color: #ffb347;
+  background: rgba(255, 179, 71, 0.08);
+}
+
+/* Highway frame */
+.app--future .chart-wrap {
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    linear-gradient(
+        120deg,
+        rgba(255, 184, 0, 0.5),
+        rgba(232, 38, 42, 0.35),
+        rgba(255, 107, 26, 0.4),
+        rgba(255, 184, 0, 0.5)
+      )
+      border-box;
+  background-size:
+    auto,
+    200% 100%;
+  animation: border-flow 8s linear infinite;
+  box-shadow:
+    0 0 60px rgba(255, 184, 0, 0.08),
+    0 0 100px rgba(232, 38, 42, 0.05),
+    inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+.app--future .song-overview {
+  border-left: 1px solid rgba(232, 38, 42, 0.25);
+  background: #000000;
+  box-shadow: inset 12px 0 32px rgba(232, 38, 42, 0.06);
+}
+
+.app--future .placement-hint {
+  font-family: var(--font-mono);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  background: rgba(0, 0, 0, 0.92);
+  box-shadow: 0 0 24px rgba(255, 184, 0, 0.15);
+}
+
+.app--future .sidebar-tab.active {
+  background: rgba(255, 184, 0, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.app--future kbd {
+  font-family: var(--font-mono);
+  border-color: rgba(255, 184, 0, 0.25);
+  background: rgba(255, 184, 0, 0.06);
+  color: var(--accent);
+}
+
+.app--future .sidebar::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--accent-3), var(--accent-2));
+}

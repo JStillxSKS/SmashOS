@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Lightweight graphical hub for Smash OS (yad). Falls back to terminal menu.
+set -euo pipefail
+
+SMASH="${SMASH:-smash}"
+CHARTS="${SMASH_CHARTS:-$HOME/Charts}"
+INDIES_DB="${INDIES_DB_URL:-https://indies-db.vercel.app}"
+
+if command -v yad >/dev/null 2>&1; then
+  choice=$(yad --list --title="Smash OS" --window-icon=applications-multimedia \
+    --width=480 --height=400 --center --no-headers \
+    --column=Action \
+    "Launch Editor" \
+    "New project…" \
+    "Open Charts" \
+    "Indies-DB (browser)" \
+    "Pipeline: audio → indies…" \
+    "Push current project to Quest" \
+    "Apply installs on Quest" \
+    "Pack SmashRom" \
+    "Doctor" \
+    --print-column=1) || exit 0
+  choice=$(echo "$choice" | sed 's/|//g' | tr -d '\r')
+  case "$choice" in
+    "Launch Editor") exec $SMASH editor ;;
+    "New project…")
+      title=$(yad --entry --title="New project" --text="Song title:" --entry-text="Untitled") || exit 0
+      exec $SMASH new "$title"
+      ;;
+    "Open Charts")
+      mkdir -p "$CHARTS"
+      exec xdg-open "$CHARTS"
+      ;;
+    "Indies-DB (browser)") exec $SMASH browser ;;
+    "Pipeline: audio → indies…")
+      f=$(yad --file --title="Pick audio" --file-filter="Audio|*.wav *.mp3 *.ogg *.flac *.m4a") || exit 0
+      exec $SMASH pipeline "$f"
+      ;;
+    "Push current project to Quest") exec $SMASH push-quest ;;
+    "Apply installs on Quest") exec $SMASH apply-quest ;;
+    "Pack SmashRom") exec $SMASH pack ;;
+    "Doctor") $SMASH doctor; yad --text-info --title="Doctor" --width=600 --height=400 --button=OK:0 < <($SMASH doctor 2>&1) ;;
+  esac
+  exit 0
+fi
+
+# Terminal fallback
+echo "Smash OS Hub"
+echo "  1) Editor"
+echo "  2) New project"
+echo "  3) Charts folder"
+echo "  4) Indies-DB"
+echo "  5) Doctor"
+read -r -p "> " n
+case "$n" in
+  1) exec $SMASH editor ;;
+  2) read -r -p "Title: " t; exec $SMASH new "$t" ;;
+  3) mkdir -p "$CHARTS"; xdg-open "$CHARTS" ;;
+  4) exec $SMASH browser ;;
+  5) exec $SMASH doctor ;;
+esac
