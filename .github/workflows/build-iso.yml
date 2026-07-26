@@ -14,15 +14,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fix script permissions and line endings
+        run: |
+          git config core.autocrlf false
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dos2unix || true
+          find build tools desktop -type f \( -name '*.sh' -o -name '*.chroot' -o -name 'smash' -o -name 'smash-hub' -o -name 'autostart' \) -print0 | xargs -0 -r dos2unix -q || true
+          chmod +x build/build-iso.sh build/install-overlay.sh build/hooks/01-smashos.chroot \
+            tools/pipeline/smash tools/hub/smash-hub tools/smashroms/*.sh tools/smashroms/*.py \
+            tools/audio-to-midi/*.py tools/midi-to-indies/*.py desktop/openbox/autostart || true
+          ls -la build/build-iso.sh
+          head -1 build/build-iso.sh | od -c | head -2
+
       - name: Install live-build
         run: |
-          sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             live-build debootstrap squashfs-tools xorriso isolinux syslinux-common \
             rsync git ca-certificates curl
 
       - name: Build ISO
-        run: sudo ./build/build-iso.sh
+        run: sudo bash ./build/build-iso.sh
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4

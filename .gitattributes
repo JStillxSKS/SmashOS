@@ -1,0 +1,19 @@
+﻿* text=auto eol=lf
+*.sh text eol=lf
+*.chroot text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.desktop text eol=lf
+*.json text eol=lf
+*.svg text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.zip binary
+*.iso binary
+tools/pipeline/smash text eol=lf
+tools/hub/smash-hub text eol=lf
+desktop/openbox/autostart text eol=lf
