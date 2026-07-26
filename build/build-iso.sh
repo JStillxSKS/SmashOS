@@ -33,6 +33,10 @@ lb config \
   --architectures "$ARCH" \
   --binary-images iso-hybrid \
   --archive-areas "main contrib non-free non-free-firmware" \
+  --mirror-bootstrap "http://deb.debian.org/debian/" \
+  --mirror-chroot "http://deb.debian.org/debian/" \
+  --mirror-binary "http://deb.debian.org/debian/" \
+  --keyring-packages "debian-archive-keyring" \
   --debian-installer none \
   --bootappend-live "boot=live components quiet splash username=smash hostname=smashos" \
   --iso-application "Smash OS" \
