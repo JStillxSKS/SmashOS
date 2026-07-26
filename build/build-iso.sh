@@ -22,7 +22,20 @@ echo "    work=$WORK out=$OUT arch=$ARCH distro=$DISTRO"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
   live-build debootstrap squashfs-tools xorriso isolinux syslinux-common \
-  rsync git ca-certificates curl debian-archive-keyring
+  rsync git ca-certificates curl wget gnupg dpkg-dev
+
+# Ubuntu runners ship a stale debian-archive-keyring → debootstrap fails on bookworm.
+# Install the current keyring .deb straight from Debian.
+KEYRING_DEB_URL="${DEBIAN_ARCHIVE_KEYRING_DEB:-http://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb}"
+echo "==> Installing current Debian archive keyring"
+wget -q -O /tmp/debian-archive-keyring.deb "$KEYRING_DEB_URL" \
+  || wget -q -O /tmp/debian-archive-keyring.deb "https://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb"
+dpkg -i /tmp/debian-archive-keyring.deb || apt-get install -f -y -qq
+# Also import release keys into a dedicated keyring for debootstrap
+mkdir -p /etc/apt/trusted.gpg.d
+if [[ -f /usr/share/keyrings/debian-archive-keyring.gpg ]]; then
+  cp -f /usr/share/keyrings/debian-archive-keyring.gpg /etc/apt/trusted.gpg.d/debian-archive-keyring.gpg || true
+fi
 
 rm -rf "$WORK"
 mkdir -p "$WORK" "$OUT"
@@ -39,6 +52,8 @@ lb config \
   --mirror-chroot "http://deb.debian.org/debian/" \
   --mirror-binary "http://deb.debian.org/debian/" \
   --keyring-packages "debian-archive-keyring" \
+  --apt-options "--yes --option Acquire::Check-Valid-Until=false" \
+  --debootstrap-options "--keyring=/usr/share/keyrings/debian-archive-keyring.gpg --variant=minbase" \
   --debian-installer none \
   --bootappend-live "boot=live components quiet splash username=smash hostname=smashos" \
   --iso-application "Smash OS" \
