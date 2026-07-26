@@ -17,9 +17,19 @@ if command -v tint2 >/dev/null 2>&1; then
   tint2 &
 fi
 
-# Nitrogen / solid bg — black, no wallpaper bloat
+# Background: solid dark + Smash Drums logo if feh/hsetroot available
 if command -v xsetroot >/dev/null 2>&1; then
   xsetroot -solid "#0d1117"
+fi
+LOGO="${SMASHOS_ROOT}/branding/smashos-logo-full.png"
+[[ -f "$LOGO" ]] || LOGO="${SMASHOS_ROOT}/branding/smashos-logo.jpg"
+[[ -f "$LOGO" ]] || LOGO="/usr/local/share/smashos/branding/smashos-logo.jpg"
+if [[ -f "$LOGO" ]]; then
+  if command -v feh >/dev/null 2>&1; then
+    feh --bg-max --image-bg "#0d1117" "$LOGO" 2>/dev/null || true
+  elif command -v hsetroot >/dev/null 2>&1; then
+    hsetroot -cover "$LOGO" 2>/dev/null || hsetroot -full "$LOGO" 2>/dev/null || true
+  fi
 fi
 
 # PolicyKit agent for mounts / network if present

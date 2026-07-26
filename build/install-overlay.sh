@@ -14,14 +14,29 @@ echo "==> Smash OS overlay $VERSION → $ROOT"
 install -d "$ROOT/opt/smashos/tools"
 install -d "$ROOT/opt/smashos/bin"
 install -d "$ROOT/opt/smashos/packages"
+install -d "$ROOT/opt/smashos/branding"
 install -d "$ROOT/usr/local/bin"
 install -d "$ROOT/usr/local/share/applications"
+install -d "$ROOT/usr/local/share/smashos/branding"
+install -d "$ROOT/usr/share/pixmaps"
 install -d "$ROOT/etc/firefox/policies"
 install -d "$ROOT/etc/skel/.config/openbox"
 install -d "$ROOT/etc/skel/.config/tint2"
 install -d "$ROOT/etc/skel/.config/autostart"
 install -d "$ROOT/etc/skel/Charts/Songs"
 install -d "$ROOT/usr/share/xsessions"
+
+# Branding — Smash Drums Editor logo
+if [[ -d "$REPO/branding" ]]; then
+  rsync -a "$REPO/branding/" "$ROOT/opt/smashos/branding/"
+  rsync -a "$REPO/branding/" "$ROOT/usr/local/share/smashos/branding/"
+  # pixmaps for .desktop Icon= names
+  for f in smashos-logo.png smashos-logo.svg smashos-logo.jpg smashos-logo.ico; do
+    if [[ -f "$REPO/branding/$f" ]]; then
+      install -m 0644 "$REPO/branding/$f" "$ROOT/usr/share/pixmaps/$f" || true
+    fi
+  done
+fi
 
 # Tools
 rsync -a --delete \

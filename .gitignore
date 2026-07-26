@@ -1,4 +1,4 @@
-build/work/
+﻿build/work/
 build/includes.chroot/
 dist/
 **/.DS_Store
@@ -13,3 +13,18 @@ packages/smash-drums-editor/.local/
 *.iso
 *.log
 _test_charts/
+_mcp_*/
+_push*/
+_upload*/
+_content_*/
+_ess_*.json
+_batch*.json
+_one_*.json
+_b64_*/
+_tool_*.json
+_split_*.py
+_b64_encode.py
+_push_via_api.py
+smashos-remaining-upload.zip
+tools/pipeline/smash.part*
+tools/pipeline/assemble-smash.sh

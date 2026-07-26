@@ -23,6 +23,7 @@ pulseaudio
 alsa-utils
 fonts-dejavu-core
 hsetroot
+feh
 
 # Browser
 firefox-esr

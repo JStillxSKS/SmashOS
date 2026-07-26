@@ -4,6 +4,8 @@
 
 Lightweight. Smooth. Charting-first. No Windows.
 
+Logo: the same **Smash Drums Editor** mark (under `branding/`) — desktop icons, wallpaper, and app branding.
+
 | Piece | Role |
 |--------|------|
 | **Smash Drums Editor** | Primary app (opens on login) |
