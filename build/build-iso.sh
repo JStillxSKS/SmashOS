@@ -22,13 +22,15 @@ echo "    work=$WORK out=$OUT arch=$ARCH distro=$DISTRO"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
   live-build debootstrap squashfs-tools xorriso isolinux syslinux-common \
-  rsync git ca-certificates curl
+  rsync git ca-certificates curl debian-archive-keyring
 
 rm -rf "$WORK"
 mkdir -p "$WORK" "$OUT"
 cd "$WORK"
 
+# Force Debian mode even when the host is Ubuntu (GitHub Actions runners)
 lb config \
+  --mode debian \
   --distribution "$DISTRO" \
   --architectures "$ARCH" \
   --binary-images iso-hybrid \
